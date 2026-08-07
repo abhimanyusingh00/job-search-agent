@@ -1,0 +1,131 @@
+import { useEffect, useRef, useState } from "react";
+import { getResume, uploadResume } from "../api.js";
+
+export default function ResumeUpload() {
+  const [resume, setResume] = useState(undefined); // undefined = loading
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState(null);
+  const [dragOver, setDragOver] = useState(false);
+  const [replacing, setReplacing] = useState(false);
+  const inputRef = useRef(null);
+
+  async function refresh() {
+    try {
+      setResume(await getResume());
+    } catch (err) {
+      setError(err.message || String(err));
+      setResume(null);
+    }
+  }
+
+  useEffect(() => { refresh(); }, []);
+
+  async function handleFile(file) {
+    if (!file) return;
+    if (!/\.(pdf|docx?)$/i.test(file.name)) {
+      setError("Please upload a PDF or DOCX file.");
+      return;
+    }
+    setError(null);
+    setUploading(true);
+    try {
+      await uploadResume(file);
+      await refresh();
+      setReplacing(false);
+    } catch (err) {
+      setError(err.message || String(err));
+    }
+    setUploading(false);
+  }
+
+  function onDrop(e) {
+    e.preventDefault();
+    setDragOver(false);
+    handleFile(e.dataTransfer.files?.[0]);
+  }
+
+  const showDropzone = resume === null || replacing;
+
+  return (
+    <div className="resume-section">
+      {resume === undefined && <div className="muted">Loading…</div>}
+
+      {resume !== undefined && showDropzone && (
+        <div
+          className={`dropzone ${dragOver ? "drag-over" : ""} ${uploading ? "busy" : ""}`}
+          onClick={() => !uploading && inputRef.current?.click()}
+          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={onDrop}
+        >
+          <input
+            ref={inputRef} type="file" accept=".pdf,.doc,.docx" hidden
+            onChange={(e) => handleFile(e.target.files?.[0])}
+          />
+          {uploading ? (
+            <>
+              <div className="spinner" />
+              <p>Reading your resume and extracting skills…</p>
+              <p className="muted small">This can take a few seconds.</p>
+            </>
+          ) : (
+            <>
+              <div className="dropzone-icon">📄</div>
+              <p><strong>Click to upload</strong> or drag your resume here</p>
+              <p className="muted small">PDF or DOCX</p>
+            </>
+          )}
+        </div>
+      )}
+
+      {error && <div className="error upload-error">{error}</div>}
+
+      {resume && !showDropzone && (
+        <div className="resume-card">
+          <div className="resume-card-header">
+            <div>
+              <h2>{resume.structured?.contact?.name || resume.filename}</h2>
+              <p className="muted">
+                {resume.structured?.contact?.email}
+                {resume.structured?.contact?.location ? ` — ${resume.structured.contact.location}` : ""}
+              </p>
+            </div>
+            <button className="secondary-btn" onClick={() => setReplacing(true)}>
+              Replace resume
+            </button>
+          </div>
+
+          {resume.structured?.summary && (
+            <p className="resume-summary">{resume.structured.summary}</p>
+          )}
+
+          {resume.structured?.skills?.length > 0 && (
+            <div className="keyword-row">
+              <span className="keyword-label">Skills</span>
+              <div className="keyword-chips">
+                {resume.structured.skills.map((s) => <span key={s} className="chip matched">{s}</span>)}
+              </div>
+            </div>
+          )}
+
+          {resume.structured?.experience?.length > 0 && (
+            <div className="resume-experience">
+              <span className="keyword-label">Experience</span>
+              {resume.structured.experience.map((exp, i) => (
+                <div key={i} className="experience-item">
+                  <div className="experience-title">
+                    {exp.title} <span className="muted">— {exp.company}</span>
+                  </div>
+                  <div className="muted small">{exp.start} – {exp.end}</div>
+                  <ul>
+                    {exp.bullets?.map((b, j) => <li key={j}>{b}</li>)}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
