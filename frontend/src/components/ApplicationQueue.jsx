@@ -4,6 +4,8 @@ import ApplicationDetail from "./ApplicationDetail.jsx";
 import ScoreBadge from "./ScoreBadge.jsx";
 import SourceTag from "./SourceTag.jsx";
 import ResumeUpload from "./ResumeUpload.jsx";
+import Logo from "./Logo.jsx";
+import Notice, { EmptyState } from "./Notice.jsx";
 
 const TABS = [
   { key: "pending_review", label: "Pending" },
@@ -70,9 +72,12 @@ export default function ApplicationQueue() {
   return (
     <div className="queue-page">
       <header>
-        <div>
-          <h1>Job Search Agent</h1>
-          <p className="tagline">Tailored applications, queued for your review</p>
+        <div className="brand">
+          <Logo size={32} />
+          <div>
+            <h1>Job Search Agent</h1>
+            <p className="tagline">Tailored applications, queued for your review</p>
+          </div>
         </div>
         <div className="header-right">
           {!isSupabaseConfigured && <span className="dev-badge">local dev mode</span>}
@@ -136,22 +141,16 @@ export default function ApplicationQueue() {
             </div>
           )}
 
-          {error && <div className="error">Failed to load: {error}</div>}
+          {error && <Notice tone="error">Failed to load: {error}</Notice>}
 
           {!loading && !error && apps.length === 0 && (
-            <div className="empty-state">
-              <div className="empty-icon">📭</div>
-              <p>Nothing here yet.</p>
-              <p className="muted small">
-                Run <code>python -m fetcher.fetch_jobs</code> then <code>python -m tailor.tailor</code> to populate this queue.
-              </p>
-            </div>
+            <EmptyState title="Nothing here yet">
+              Run <code>python -m fetcher.fetch_jobs</code> then <code>python -m tailor.tailor</code> to populate this queue.
+            </EmptyState>
           )}
 
           {!loading && !error && apps.length > 0 && filtered.length === 0 && (
-            <div className="empty-state">
-              <p className="muted">No matches for "{query}".</p>
-            </div>
+            <EmptyState title={`No matches for "${query}"`} />
           )}
 
           <div className="app-list">

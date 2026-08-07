@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { login } from "../api.js";
+import Logo from "./Logo.jsx";
+import Notice from "./Notice.jsx";
 
 export default function Login({ onLoggedIn }) {
   const [email, setEmail] = useState("");
@@ -20,9 +22,9 @@ export default function Login({ onLoggedIn }) {
   return (
     <div className="login-screen">
       <form className="login-card" onSubmit={handleSubmit}>
-        <div className="login-mark">🎯</div>
+        <div className="login-mark"><Logo size={40} /></div>
         <h1>Job Search Agent</h1>
-        <p className="muted">Sign in with the Supabase Auth user you created for yourself.</p>
+        <p>Sign in with the Supabase Auth user you created for yourself.</p>
         <label className="field">
           <span>Email</span>
           <input
@@ -37,7 +39,7 @@ export default function Login({ onLoggedIn }) {
             onChange={(e) => setPassword(e.target.value)} required
           />
         </label>
-        {error && <div className="error">{error}</div>}
+        {error && <Notice tone="error">{error}</Notice>}
         <button type="submit" disabled={loading}>{loading ? "Signing in…" : "Sign in"}</button>
       </form>
     </div>

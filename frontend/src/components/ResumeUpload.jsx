@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { getResume, uploadResume } from "../api.js";
+import Notice from "./Notice.jsx";
 
 export default function ResumeUpload() {
   const [resume, setResume] = useState(undefined); // undefined = loading
@@ -70,7 +71,13 @@ export default function ResumeUpload() {
             </>
           ) : (
             <>
-              <div className="dropzone-icon">📄</div>
+              <div className="dropzone-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <path d="M14 3v5a1 1 0 0 0 1 1h5" />
+                  <path d="M6 3h8l6 6v11a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" />
+                  <path d="M12 17v-6M9.5 13.5 12 11l2.5 2.5" />
+                </svg>
+              </div>
               <p><strong>Click to upload</strong> or drag your resume here</p>
               <p className="muted small">PDF or DOCX</p>
             </>
@@ -78,7 +85,7 @@ export default function ResumeUpload() {
         </div>
       )}
 
-      {error && <div className="error upload-error">{error}</div>}
+      {error && <div className="upload-error"><Notice tone="error">{error}</Notice></div>}
 
       {resume && !showDropzone && (
         <div className="resume-card">
