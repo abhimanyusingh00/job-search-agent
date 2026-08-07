@@ -10,19 +10,49 @@
    also uses this for browsing/approving the queue (in production it talks
    to Supabase's PostgREST API directly instead).
 
+Serves over HTTPS (self-signed, generated on first run) rather than plain
+HTTP: browsers — Safari in particular — block an HTTPS page (the deployed
+frontend) from fetching plain http:// content at all, even to localhost,
+with no way for the server to opt out via headers. HTTPS-to-HTTPS avoids
+that entirely. The first time you use it in a given browser, visit
+https://localhost:8787/resume directly once and accept the "not private"
+warning — that's expected for a self-signed local-only certificate, not a
+sign anything is wrong.
+
 Run: python -m scripts.local_server
-Serves on http://localhost:8787
+Serves on https://localhost:8787
 """
 
 import base64
 import json
 import re
+import ssl
+import subprocess
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
 
 from storage import db
 from tailor.resume_parser import parse_resume_bytes
 
 PORT = 8787
+CERT_DIR = Path(__file__).parent / "certs"
+CERT_FILE = CERT_DIR / "localhost.pem"
+KEY_FILE = CERT_DIR / "localhost-key.pem"
+
+
+def ensure_cert():
+    if CERT_FILE.exists() and KEY_FILE.exists():
+        return
+    CERT_DIR.mkdir(exist_ok=True)
+    subprocess.run(
+        [
+            "openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes",
+            "-keyout", str(KEY_FILE), "-out", str(CERT_FILE), "-days", "3650",
+            "-subj", "/CN=localhost",
+            "-addext", "subjectAltName=DNS:localhost,IP:127.0.0.1",
+        ],
+        check=True, capture_output=True,
+    )
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -92,5 +122,12 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    print(f"Local server (storage backend={db.BACKEND}) on http://localhost:{PORT}")
-    HTTPServer(("localhost", PORT), Handler).serve_forever()
+    ensure_cert()
+    server = HTTPServer(("localhost", PORT), Handler)
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    ctx.load_cert_chain(certfile=str(CERT_FILE), keyfile=str(KEY_FILE))
+    server.socket = ctx.wrap_socket(server.socket, server_side=True)
+    print(f"Local server (storage backend={db.BACKEND}) on https://localhost:{PORT}")
+    print("First time in a given browser: visit that URL once and accept the "
+          "self-signed certificate warning (Safari: 'visit this website').")
+    server.serve_forever()
